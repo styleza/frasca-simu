@@ -23,7 +23,7 @@ documented in gdocs: https://docs.google.com/spreadsheets/d/1xU_mifn_-DgUhoRsJCm
 ## UDP protocol 
 
 UDP protocol is very simple, max message length is 1024 and it consists
-<datalabel1> <data1> <datalabel2> <data2> <datalabel3> <data3> ...
+`<datalabel1> <data1> <datalabel2> <data2> <datalabel3> <data3>` ...
 
 # Set Data.exe
 
