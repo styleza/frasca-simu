@@ -3,18 +3,19 @@ import json
 import serial
 import sys
 import time
-import tkinter
-from tkinter import *
+#uncomment for UI
+#import tkinter
+#from tkinter import *
 import threading
 import geopy
 import geopy.distance
 from math import pi,sqrt,asin,atan
 
 
-LOCAL_IP = "127.0.0.1"
+LOCAL_IP = "0.0.0.0"
 LOCAL_PORT = 20002
 BUFFER_SIZE = 1024
-COM_PORT='COM1'
+COM_PORT='/dev/ttyUSB0'
 BAUD_RATE=9600
 
 
@@ -90,6 +91,19 @@ class App(threading.Thread):
                         
                 self.root.after(100,self.update_data)
                 self.root.mainloop()
+
+class TerminalApp(threading.Thread):
+        def __init__(self):
+                threading.Thread.__init__(self)
+                self.start()
+        def run(self):
+                global data_array
+                while True:
+                        sys.stdout.write(UDPSender.packdatagram(False,data_array).decode()+"\r")
+                        sys.stdout.flush()
+                        time.sleep(0.1)
+
+
 
 class DataPoller(threading.Thread):
 
@@ -183,6 +197,7 @@ class UDPSender(threading.Thread):
 
 data_poller = DataPoller(COM_PORT, BAUD_RATE)
 udp_sender = UDPSender(LOCAL_IP, LOCAL_PORT)
-app = App()
-
+# uncomment for ui app
+#app = App()
+app = TerminalApp()
 
