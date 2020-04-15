@@ -177,14 +177,14 @@ void sendDataToFSX(double& Altitude, double& Latitude, double& Longitude, double
     hr = SimConnect_SetDataOnSimObject(hSimConnect, PLANE_HEADING, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(double), &Heading);
 }
 
-void eventloop() {
+void eventloop(const char* server, const char* port) {
     // Request newest data from UDP server
     std::string data = "OK";
     std::vector<std::string> v;
     std::map<std::string, double> m;
 
 
-    Socket.SendTo("127.0.0.1", 20002, data.c_str(), data.size());
+    Socket.SendTo(server, atoi(port), data.c_str(), data.size());
     Socket.RecvFrom(UDPBuffer, 1024);
 
     // Split data by ' '
@@ -194,20 +194,20 @@ void eventloop() {
     parseVarsToMap(v, m);
 
     // Send data to simulator
-    printf("Altitude: %f, Lat: %f, Lon: %f, Pitch: %f, Bank: %f, Heading: %f \r\n", m["HA"], m["HKr"], m["HMr"], m["HEr"], m["HGr"], m["HCr"]);
+    printf("Altitude: %f, Lat: %f, Lon: %f, Pitch: %f, Bank: %f, Heading: %f \r", m["HA"], m["HKr"], m["HMr"], m["HEr"], m["HGr"], m["HCr"]);
     sendDataToFSX(m["HA"], m["HKr"], m["HMr"], m["HEr"], m["HGr"], m["HCr"]);
 
 
 }
 
-int __cdecl _tmain(int argc, _TCHAR* argv[])
+int main(int argc, const char* argv[])
 {
-    if (!initFSX()) {
+    if (!initFSX() || argc < 3) {
         return -1;
     }
 
     while (quit == 0) {
-        eventloop();
+        eventloop(argv[1], argv[2]);
         SimConnect_CallDispatch(hSimConnect, MyDispatchProcSD, NULL);
         Sleep(1);
     }
