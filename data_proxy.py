@@ -1,21 +1,37 @@
+import sys
+
+LOCAL_IP = "0.0.0.0"
+LOCAL_PORT = 20002
+BUFFER_SIZE = 1024
+COM_PORT=''
+BAUD_RATE=9600
+SHOW_UI='cmd' # cmd|ui|both
+
+if len(sys.argv) < 2:
+        print("Usage: {} COMPORT [LOCAL IP] [LOCAL PORT] [BAUDRATE] [Show UI (cmd|ui|both)]".format(sys.argv[0]))
+        sys.exit(-1)
+
+COM_PORT = sys.argv[1]
+LOCAL_IP = sys.argv[2] if len(sys.argv) >2 else LOCAL_IP
+LOCAL_PORT = int(sys.argv[3]) if len(sys.argv) >3 else LOCAL_PORT
+BAUD_RATE = int(sys.argv[4]) if len(sys.argv) >4 else BAUD_RATE
+SHOW_UI = sys.argv[5] if len(sys.argv) >5 else SHOW_UI
+
+
+print("COM:{}@{} UDP:{}:{} UI:{}".format(COM_PORT, BAUD_RATE, LOCAL_IP, LOCAL_PORT, SHOW_UI))
+
 import socket
 import json
 import serial
-import sys
 import time
-import tkinter
-from tkinter import *
+if SHOW_UI in ["ui", "both"]:
+        import tkinter
+        from tkinter import *
+
 import threading
 import geopy
 import geopy.distance
 from math import pi,sqrt,asin,atan
-
-
-LOCAL_IP = "127.0.0.1"
-LOCAL_PORT = 20002
-BUFFER_SIZE = 1024
-COM_PORT='COM1'
-BAUD_RATE=9600
 
 
 FRASCA_WSG86_500POINT_LAT=64.931388
@@ -90,6 +106,19 @@ class App(threading.Thread):
                         
                 self.root.after(100,self.update_data)
                 self.root.mainloop()
+
+class TerminalApp(threading.Thread):
+        def __init__(self):
+                threading.Thread.__init__(self)
+                self.start()
+        def run(self):
+                global data_array
+                while True:
+                        sys.stdout.write(UDPSender.packdatagram(False,data_array).decode()+"\r")
+                        sys.stdout.flush()
+                        time.sleep(0.1)
+
+
 
 class DataPoller(threading.Thread):
 
@@ -183,6 +212,9 @@ class UDPSender(threading.Thread):
 
 data_poller = DataPoller(COM_PORT, BAUD_RATE)
 udp_sender = UDPSender(LOCAL_IP, LOCAL_PORT)
-app = App()
 
+if SHOW_UI in ["ui","both"]:
+        app = App()
+if SHOW_UI in ["cmd","both"]:
+        app = TerminalApp()
 
