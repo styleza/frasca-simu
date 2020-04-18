@@ -169,9 +169,7 @@ class DataPoller(threading.Thread):
                            else
                            (alpha+pi*1.5 if dy>=0 and dx<0
                             else -1))))
-                print(heading*(180.0/pi))
-                print(dy,dx)
-                
+
                 dist = geopy.distance.VincentyDistance(nautical=dc)
 
                 point1 = dist.destination(point=point0,bearing=heading*(180.0/pi))
@@ -186,7 +184,7 @@ class DataPoller(threading.Thread):
                         for k in data_array:
                                 data_array[k]=self.poll(k)
                         self.convert_data_array_to_datagram()
-                        print("Polling rate",1.0/(time.time()-polling_sequence_started),"r/s")
+                        #print("Polling rate",1.0/(time.time()-polling_sequence_started),"r/s")
 
 class UDPSender(threading.Thread):
         def __init__(self, LOCAL_IP, LOCAL_PORT):
