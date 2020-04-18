@@ -155,10 +155,10 @@ class DataPoller(threading.Thread):
                 # HM=East, HK=North
                 datagram["HA"] = data_array["HA"]
                 datagram["HCr"] = data_array["HC"]*(pi/180.0)
-                datagram["HGr"] = data_array["HG"]*(pi/180.0)
-                datagram["HEr"] = data_array["HE"]*(pi/180.0)
-                dy=data_array["HK"]-500.0
-                dx=data_array["HM"]-500.0
+                datagram["HGr"] = data_array["HG"]*(pi/180.0)*-1.0
+                datagram["HEr"] = data_array["HE"]*(pi/180.0)*-1.0
+                dy=data_array["HM"]-500.0
+                dx=data_array["HK"]-500.0
                 dc=sqrt(pow(dy,2)+pow(dx,2))
                 alpha=0 if dy == 0.0 else atan(abs(dx)/abs(dy))
                 heading=(alpha if dy>0 and dx>=0
@@ -170,8 +170,10 @@ class DataPoller(threading.Thread):
                            (alpha+pi*1.5 if dy>=0 and dx<0
                             else -1))))
 
-                dist = geopy.distance.VincentyDistance(nautical=dc)
-
+#                dist = geopy.distance.VincentyDistance(nautical=dc)
+                dist = geopy.distance.geodesic(nautical=dc)
+#                print(dy,dx)
+#                print(dist,heading)
                 point1 = dist.destination(point=point0,bearing=heading*(180.0/pi))
 
                 datagram["HKr"] = point1.latitude*(pi/180.0)
