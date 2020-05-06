@@ -124,20 +124,20 @@ class DataPoller(threading.Thread):
 
         def __init__(self, COM_PORT, BAUD_RATE):
                 threading.Thread.__init__(self)
-                self.ser = serial.Serial(COM_PORT, BAUD_RATE)
+                self.ser = serial.Serial(COM_PORT, BAUD_RATE,timeout=1)
                 self.start()
         def _readline(self):
                 eol = b'\r'
                 leneol = len(eol)
                 line = bytearray()
                 while True:
-                        c = self.ser.read(1)
-                        if c:
-                                line += c
-                                if line[-leneol:] == eol:
+                                c = self.ser.read(1)
+                                if c:
+                                        line += c
+                                        if line[-leneol:] == eol:
+                                                break
+                                else:
                                         break
-                        else:
-                                break
                 return bytes(line)
         def poll(self, command):
                 self.ser.write((command+"\r").encode())
