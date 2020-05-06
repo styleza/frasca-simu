@@ -177,7 +177,7 @@ void sendDataToFSX(double& Altitude, double& Latitude, double& Longitude, double
     hr = SimConnect_SetDataOnSimObject(hSimConnect, PLANE_HEADING, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(double), &Heading);
 }
 
-void eventloop(const char* server, const char* port) {
+void eventloop(const char* server, const char* port, LONG timeDelta) {
     // Request newest data from UDP server
     std::string data = "OK";
     std::vector<std::string> v;
@@ -194,7 +194,7 @@ void eventloop(const char* server, const char* port) {
     parseVarsToMap(v, m);
 
     // Send data to simulator
-    printf("Altitude: %f, Lat: %f, Lon: %f, Pitch: %f, Bank: %f, Heading: %f \r", m["HA"], m["HKr"], m["HMr"], m["HEr"], m["HGr"], m["HCr"]);
+    printf("Altitude: %f, Lat: %f, Lon: %f, Pitch: %f, Bank: %f, Heading: %f, TDELTA: %ld \r", m["HA"], m["HKr"], m["HMr"], m["HEr"], m["HGr"], m["HCr"], timeDelta);
     sendDataToFSX(m["HA"], m["HKr"], m["HMr"], m["HEr"], m["HGr"], m["HCr"]);
 
 
@@ -205,9 +205,14 @@ int main(int argc, const char* argv[])
     if (!initFSX() || argc < 3) {
         return -1;
     }
-
+    SYSTEMTIME time;
+    GetSystemTime(&time);
+    LONG last_time = time.wMilliseconds;
     while (quit == 0) {
-        eventloop(argv[1], argv[2]);
+        GetSystemTime(&time);
+        LONG delta =  time.wMilliseconds - last_time;
+        last_time = time.wMilliseconds;
+        eventloop(argv[1], argv[2],delta);
         SimConnect_CallDispatch(hSimConnect, MyDispatchProcSD, NULL);
         Sleep(1);
     }
