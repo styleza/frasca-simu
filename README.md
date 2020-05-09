@@ -2,7 +2,7 @@
 
 This project aims to gather data from frasca bonanza simulator (late '70s/early '80s), convert it to correct format and input it to Flight Simulator X
 
-Project consits of two applications which communicate via UDP (port 20002, currently hardcoded)
+Project consits of two applications (and debuggers) which communicate via UDP (port 20002, currently hardcoded)
 
 # data_proxy.py
 
@@ -44,5 +44,28 @@ Currently supported datalabels are
 * HGr = Bank in radians 
 * HCr = Heading in radians 
 
+# Debuggers
+
+## location_debug.py
+
+This tool aims to help configure frasca simulator locations according to fsx.
+
+It consists of UI where you can input plane location and attitude data, it sends the data according to protocol to Set Data.exe. This way you can "simulate" any data sent that would be sent from frasca.
+
+## simulate_data.py
+
+Sends synthetic frasca data to COM-port. This is automatic simulation of frasca.
+
+NOTICE! you'll need a virtual serial port adapter to bypass data from COM-port to another (for example com0com on windows)
+
+# Setup & running
+
+* Install python 3.x
+* Install geopy, pyserial modules (using pip)
+* Connect serial port to computer
+* Run `python3 data_proxy.py /dev/ttyUSB0` (or whatever is the COM port, see also other parameters of data_proxy.py if more config wanted) 
+* Run FSX 
+* Run Set Data.exe on FSX computer `"Set Data.exe" 127.0.0.1 2000` (check ip and ports if data_proxy is being run somewhere else)
+* Fly with Frasca, see world in FSX!
 
 

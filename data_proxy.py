@@ -157,17 +157,17 @@ class DataPoller(threading.Thread):
                 datagram["HCr"] = data_array["HC"]*(pi/180.0)
                 datagram["HGr"] = data_array["HG"]*(pi/180.0)*-1.0
                 datagram["HEr"] = data_array["HE"]*(pi/180.0)*-1.0
-                dy=data_array["HM"]-500.0
-                dx=data_array["HK"]-500.0
+                dy=data_array["HK"]-500.0
+                dx=data_array["HM"]-500.0
                 dc=sqrt(pow(dy,2)+pow(dx,2))
                 alpha=0 if dy == 0.0 else atan(abs(dx)/abs(dy))
                 heading=(alpha if dy>0 and dx>=0
                          else
-                         (alpha+pi/2 if dy<=0 and dx>0
+                         (pi-alpha if dy<=0 and dx>0
                           else
                           (alpha+pi if dy<0 and dx<=0
                            else
-                           (alpha+pi*1.5 if dy>=0 and dx<0
+                           (2*pi-alpha if dy>=0 and dx<0
                             else -1))))
 
 #                dist = geopy.distance.VincentyDistance(nautical=dc)
