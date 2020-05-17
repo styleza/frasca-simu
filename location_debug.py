@@ -42,8 +42,8 @@ datagram = {
 global command_array
 command_array = {
         "HA": "Altitude",
-        "HM": "East position",
         "HK": "North position",
+        "HM": "East position",
 #        "HV": "Velocity",
         "HC": "Heading",
         "HE": "Pitch",
@@ -134,9 +134,9 @@ class DataConverter(threading.Thread):
 #                print(dy,dx)
 #                print(dist,heading,alpha)
                 point1 = dist.destination(point=point0,bearing=heading*(180.0/pi))'''
-				
-				coords = frasca.from_frasca(data_array["HM"], data_array["HK"])
-				point1 = geopy.Point(coords[0], coords[1])
+                print(data_array)
+                point1 = frasca.from_frasca(data_array["HM"], data_array["HK"])
+                #point1 = geopy.Point(coords[0], coords[1])
 
                 datagram["HKr"] = point1.latitude*(pi/180.0)
                 datagram["HMr"] = point1.longitude*(pi/180.0)
