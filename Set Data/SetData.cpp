@@ -190,17 +190,6 @@ void sendDataToFSX(long double& Altitude, long double& Latitude, long double& Lo
     hr = SimConnect_SetDataOnSimObject(hSimConnect, PLANE_HEADING, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(long double), &Heading);
 }
 
-// https://stackoverflow.com/questions/18939869/how-to-get-the-slope-of-a-linear-regression-line-using-c
-double slope(const std::vector<int>& x, const std::vector<int>& y) {
-    const auto n = x.size();
-    const auto s_x = std::accumulate(x.begin(), x.end(), 0.0);
-    const auto s_y = std::accumulate(y.begin(), y.end(), 0.0);
-    const auto s_xx = std::inner_product(x.begin(), x.end(), x.begin(), 0.0);
-    const auto s_xy = std::inner_product(x.begin(), x.end(), y.begin(), 0.0);
-    const auto a = (n * s_xy - s_x * s_y) / (n * s_xx - s_x * s_x);
-    return a;
-}
-
 plane_data smooth(std::vector<plane_data> *p) {
     plane_data x;
     long double pitch = 0;
@@ -227,43 +216,6 @@ plane_data smooth(std::vector<plane_data> *p) {
 // hold data for turnSmoothing!
 std::vector<int> t_x;
 std::vector<plane_data> t_y;
-
-/*void updatePrediction(std::map<std::string, long double> *m, long double current_tx) {
-    double last_tx = t_x.size() > 0 ? t_x.at(t_x.size() - 1) : 0;
-    double delta_smoothing = last_tx - turnSmoothing;
-    double next_tx = last_tx + current_tx;
-    if (delta_smoothing > 0) {
-        next_tx -= delta_smoothing;
-        // timeframe needs shift, we've overcome turn smoothing limit 
-        // assume that t_x is high to low sorted already
-        unsigned int i = 0;
-        while (i < t_x.size()){
-            if (t_x.at(i) < delta_smoothing) {
-                t_x.erase(t_x.begin());
-                t_y.erase(t_y.begin());
-                i--;
-            }
-            else {
-                t_x[i] = t_x[i] - delta_smoothing;
-            }
-        }
-    }
-    t_x.push_back(next_tx);
-    t_y.push_back(m->at("HCr")*1000.0);
-    
-    long double sli = slope(t_x, t_y)/1000.0;
-    
-    slopes.push_back(sli);
-    
-    if (!std::isnan(sli)) {
-        m->at("HCr") = next_tx * sli;
-    }
-
-    if (t_y.size() > 0) {
-        m->at("HCr") = next_tx * sli;
-    }
-
-}*/
 
 plane_data dvToAttitude(const std::map<std::string, long double>* m) {
     plane_data x;
@@ -335,8 +287,7 @@ void eventloop(const char* server, const char* port, LONG timeDelta) {
         updatePrediction(&m, timeDelta);
 
         // Send data to simulator
-        //printf("%ld---", timeDelta);
-//        printf("Altitude: %f, Lat: %f, Lon: %f, Pitch: %f, Bank: %f, Heading: %f, TDELTA: %ld \r", m["HA"], m["HKr"], m["HMr"], m["HEr"], m["HGr"], m["HCr"], timeDelta);
+        //printf("Altitude: %f, Lat: %f, Lon: %f, Pitch: %f, Bank: %f, Heading: %f, TDELTA: %ld \r", m["HA"], m["HKr"], m["HMr"], m["HEr"], m["HGr"], m["HCr"], timeDelta);
         sendDataToFSX(m["HA"], m["HKr"], m["HMr"], m["HEr"], m["HGr"], m["HCr"]);
     }
     else {
