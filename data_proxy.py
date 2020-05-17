@@ -32,6 +32,7 @@ import threading
 import geopy
 import geopy.distance
 from math import pi,sqrt,asin,atan
+import frasca
 
 
 FRASCA_WSG86_500POINT_LAT=64.931388
@@ -157,7 +158,7 @@ class DataPoller(threading.Thread):
                 datagram["HCr"] = data_array["HC"]*(pi/180.0)
                 datagram["HGr"] = data_array["HG"]*(pi/180.0)*-1.0
                 datagram["HEr"] = data_array["HE"]*(pi/180.0)*-1.0
-                dy=data_array["HK"]-500.0
+                '''dy=data_array["HK"]-500.0
                 dx=data_array["HM"]-500.0
                 dc=sqrt(pow(dy,2)+pow(dx,2))
                 alpha=0 if dy == 0.0 else atan(abs(dx)/abs(dy))
@@ -174,8 +175,11 @@ class DataPoller(threading.Thread):
                 dist = geopy.distance.geodesic(nautical=dc)
 #                print(dy,dx)
 #                print(dist,heading)
-                point1 = dist.destination(point=point0,bearing=heading*(180.0/pi))
-
+                point1 = dist.destination(point=point0,bearing=heading*(180.0/pi))'''
+				
+				coords = frasca.from_frasca(data_array["HM"], data_array["HK"])
+				point1 = geopy.Point(coords[0], coords[1])
+				
                 datagram["HKr"] = point1.latitude*(pi/180.0)
                 datagram["HMr"] = point1.longitude*(pi/180.0)
 
