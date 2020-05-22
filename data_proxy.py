@@ -158,7 +158,7 @@ class DataPoller(threading.Thread):
                 datagram["HCr"] = data_array["HC"]*(pi/180.0)
                 datagram["HGr"] = data_array["HG"]*(pi/180.0)*-1.0
                 datagram["HEr"] = data_array["HE"]*(pi/180.0)*-1.0				
-                point1 = frasca.from_frasca(data_array["HM"], data_array["HK"])
+                point1 = frasca.from_frasca(data_array["HK"], data_array["HM"])
 				
                 datagram["HKr"] = point1.latitude*(pi/180.0)
                 datagram["HMr"] = point1.longitude*(pi/180.0)
