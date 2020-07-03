@@ -195,18 +195,35 @@ plane_data smooth(std::vector<plane_data> *p) {
     long double pitch = 0;
     long double bank = 0;
     long double heading = 0; 
+    int heading_break = 0;
+    int bank_break = 0;
+    int pitch_break = 0;
     long double lat = 0;
     long double lon = 0;
     for (int i = 0; i < p->size(); i++) {
+        if (i > 0) {
+            if (abs(p->at(i - 1).pitch - p->at(i).pitch) > M_PI) {
+                pitch_break = i;
+                pitch = 0;
+            }
+            if (abs(p->at(i - 1).heading - p->at(i).heading) > M_PI) {
+                heading_break = i;
+                heading = 0;
+            }
+            if (abs(p->at(i - 1).bank - p->at(i).bank) > M_PI) {
+                bank_break = i;
+                bank = 0;
+            }
+        }
         pitch += p->at(i).pitch;
         bank += p->at(i).bank;
         heading += p->at(i).heading;
         lat += p->at(i).lat;
         lon += p->at(i).lon;
     }
-    x.pitch = pitch / p->size();
-    x.bank = bank / p->size();
-    x.heading = heading / p->size();
+    x.pitch = pitch / (pitch_break > 0 ? p->size() - pitch_break : p->size());
+    x.bank = bank / (bank_break > 0 ? p->size() - bank_break : p->size());
+    x.heading = heading / (heading_break > 0 ? p->size() - heading_break : p->size());
     x.lat = lat / p->size();
     x.lon = lon / p->size();
 
