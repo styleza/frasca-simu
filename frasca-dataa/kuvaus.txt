@@ -1,0 +1,2 @@
+dataset1 on EFHK 22L oikea laskukierros
+dataset2 on EFHK 22L lähtö ja pyörimistä ja paluu keskelle efhk kenttää

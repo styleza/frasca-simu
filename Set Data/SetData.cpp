@@ -27,6 +27,8 @@
 #include "SimConnect.h"
 #include "Network.h"
 
+
+// millisecond value for average calculation. 1000=smooth proxy values from 1s time frame.
 const int turnSmoothing = 500;
 
 int     quit = 0;
@@ -190,6 +192,7 @@ void sendDataToFSX(long double& Altitude, long double& Latitude, long double& Lo
     hr = SimConnect_SetDataOnSimObject(hSimConnect, PLANE_HEADING, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(long double), &Heading);
 }
 
+// in practice this function is average calculator for plane position vector. It also takes into account 360' turns that may occur
 plane_data smooth(std::vector<plane_data> *p) {
     plane_data x;
     long double pitch = 0;
@@ -317,6 +320,7 @@ void eventloop(const char* server, const char* port, LONG timeDelta) {
 int main(int argc, const char* argv[])
 {
     if (!initFSX() || argc < 3) {
+        printf("Usage: %s [proxy IP] [proxy Port]\r\n", argv[0]);
         return -1;
     }
     SYSTEMTIME time, last_time;

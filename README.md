@@ -56,6 +56,17 @@ It consists of UI where you can input plane location and attitude data, it sends
 
 Sends synthetic frasca data to COM-port. This is automatic simulation of frasca.
 
+## data_replay.py
+
+Allows you to replay data recorded by frasca. 
+
+Usage: just run `python3 data_replay.py`
+
+data_replay.py has hardcoded ports, portrate and dataset to replay. In order to change these edit the .py file. @todo: prametrize data_replay.py
+
+NOTICE!: There are currently no script to record data. It's a @todo: write script to write frasca data according to frasca-dataa/kuvaus.txt procotol
+
+
 NOTICE! you'll need a virtual serial port adapter to bypass data from COM-port to another (for example com0com on windows)
 
 # Setup & running
