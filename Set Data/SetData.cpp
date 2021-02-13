@@ -29,8 +29,9 @@
 
 
 // millisecond value for average calculation. 1000=smooth proxy values from 1s time frame.
-const int minTurnSmoothing = 2000;
-const int maxTurnSmoothing = 5000;
+
+int minTurnSmoothing = 2000;
+int maxTurnSmoothing = 5000;
 
 int     quit = 0;
 HANDLE  hSimConnect = NULL;
@@ -315,7 +316,7 @@ void updatePrediction(std::map<std::string, long double>* m, long double current
 
     // @TODO: tämä aiheuttaa tökkimistä, paremman lopputuloksen saa jos smoothaa vaan tarpeeksi. Esim 2000ms. Eli pitää kaikki *_start nollissa
     // funtion idea on leikata dynaamisesti aikaikkunaa niin että se ottaa kahden edellisen arvon framen mukaan (tai vähintään minTurnSmoothing ajan)
-    while (!all_found && i > 0) {
+    /*while (!all_found && i > 0) {
         if (pitch_smooth_start == 0 && last_values.pitch != currentAttitude.pitch) {
             int ii = i;
             long double v = last_values.pitch;
@@ -367,7 +368,7 @@ void updatePrediction(std::map<std::string, long double>* m, long double current
         i--;
         //last_values = t_y.at(i);
         //Ota tästä kommentti pois jos haluat ottaa tämän funkkarin käyttöön
-    }
+    }*/
 
     plane_data smoothed = smooth(&t_y, pitch_smooth_start, bank_smooth_start, heading_smooth_start, lat_smooth_start, lon_smooth_start, altitude_smooth_start);
 
@@ -419,8 +420,14 @@ void eventloop(const char* server, const char* port, LONG timeDelta) {
 int main(int argc, const char* argv[])
 {
     if (!initFSX() || argc < 3) {
-        printf("Usage: %s [proxy IP] [proxy Port]\r\n", argv[0]);
+        printf("Usage: %s [proxy IP] [proxy Port] [minSmooth=2000] [maxSmooth=5000]\r\n", argv[0]);
         return -1;
+    }
+    if (argc >= 4) {
+        minTurnSmoothing = atoi(argv[3]);
+    }
+    if (argc >= 5) {
+        maxTurnSmoothing = atoi(argv[4]);
     }
     SYSTEMTIME time, last_time;
     GetSystemTime(&time);
