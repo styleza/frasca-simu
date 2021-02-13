@@ -29,7 +29,8 @@
 
 
 // millisecond value for average calculation. 1000=smooth proxy values from 1s time frame.
-const int turnSmoothing = 500;
+const int minTurnSmoothing = 2000;
+const int maxTurnSmoothing = 5000;
 
 int     quit = 0;
 HANDLE  hSimConnect = NULL;
@@ -70,6 +71,7 @@ struct plane_data {
     long double bank;
     long double lat;
     long double lon;
+    long double altitude;
 };
 
 WSASession Session;
@@ -192,8 +194,16 @@ void sendDataToFSX(long double& Altitude, long double& Latitude, long double& Lo
     hr = SimConnect_SetDataOnSimObject(hSimConnect, PLANE_HEADING, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(long double), &Heading);
 }
 
+long double smoothHelper(long double accVal, int breakPoint, int smoothingStart, int totalLength) {
+    if (breakPoint > smoothingStart) {
+        return accVal / (breakPoint > 0 ? totalLength - breakPoint : totalLength);
+    }
+    
+    return accVal / (smoothingStart > 0 ? totalLength - smoothingStart : totalLength);
+}
+
 // in practice this function is average calculator for plane position vector. It also takes into account 360' turns that may occur
-plane_data smooth(std::vector<plane_data> *p) {
+plane_data smooth(std::vector<plane_data> *p, int pitchSmoothingStart, int bankSmoothingStart, int headingSmoothingStart, int latSmoothingStart, int lonSmoothingStart, int altitudeSmoothingStart) {
     plane_data x;
     long double pitch = 0;
     long double bank = 0;
@@ -203,6 +213,7 @@ plane_data smooth(std::vector<plane_data> *p) {
     int pitch_break = 0;
     long double lat = 0;
     long double lon = 0;
+    long double altitude = 0;
     for (int i = 0; i < p->size(); i++) {
         if (i > 0) {
             if (abs(p->at(i - 1).pitch - p->at(i).pitch) > M_PI) {
@@ -218,17 +229,31 @@ plane_data smooth(std::vector<plane_data> *p) {
                 bank = 0;
             }
         }
-        pitch += p->at(i).pitch;
-        bank += p->at(i).bank;
-        heading += p->at(i).heading;
-        lat += p->at(i).lat;
-        lon += p->at(i).lon;
+        if (i >= pitchSmoothingStart) {
+            pitch += p->at(i).pitch;
+        }
+        if (i >= bankSmoothingStart) {
+            bank += p->at(i).bank;
+        }
+        if (i >= headingSmoothingStart) {
+            heading += p->at(i).heading;
+        }
+        if (i >= latSmoothingStart) {
+            lat += p->at(i).lat;
+        }
+        if (i >= lonSmoothingStart) {
+            lon += p->at(i).lon;
+        }
+        if (i >= altitudeSmoothingStart) {
+            altitude += p->at(i).altitude;
+        }
     }
-    x.pitch = pitch / (pitch_break > 0 ? p->size() - pitch_break : p->size());
-    x.bank = bank / (bank_break > 0 ? p->size() - bank_break : p->size());
-    x.heading = heading / (heading_break > 0 ? p->size() - heading_break : p->size());
-    x.lat = lat / p->size();
-    x.lon = lon / p->size();
+    x.pitch = smoothHelper(pitch, pitch_break, pitchSmoothingStart, p->size());
+    x.bank = smoothHelper(bank, bank_break, bankSmoothingStart, p->size());
+    x.heading = smoothHelper(heading, heading_break, headingSmoothingStart, p->size());
+    x.lat = smoothHelper(lat, 0, latSmoothingStart, p->size());
+    x.lon = smoothHelper(lon, 0, lonSmoothingStart, p->size());
+    x.altitude = smoothHelper(altitude, 0, altitudeSmoothingStart, p->size());
 
     return x;
 }
@@ -244,13 +269,14 @@ plane_data dvToAttitude(const std::map<std::string, long double>* m) {
     x.heading = m->at("HCr");
     x.lat = m->at("HKr");
     x.lon = m->at("HMr");
+    x.altitude = m->at("HA");
 
     return x;
 }
 
 void updatePrediction(std::map<std::string, long double>* m, long double current_tx) {
     double last_tx = t_x.size() > 0 ? t_x.at(t_x.size() - 1) : 0;
-    double delta_smoothing = last_tx - turnSmoothing;
+    double delta_smoothing = last_tx - maxTurnSmoothing;
     double next_tx = last_tx + current_tx;
     if (delta_smoothing > 0) {
         next_tx -= delta_smoothing;
@@ -268,16 +294,89 @@ void updatePrediction(std::map<std::string, long double>* m, long double current
             }
         }
     }
-    t_x.push_back(next_tx);
-    t_y.push_back(dvToAttitude(m));
 
-    plane_data smoothed = smooth(&t_y);
+    plane_data currentAttitude = dvToAttitude(m);
+
+    t_x.push_back(next_tx);
+    t_y.push_back(currentAttitude);
+
+    // backtrack to previous values to found smoothing frame per value
+    bool all_found = false;
+    int i = t_y.size() - 1;
+    int pitch_smooth_start = 0;
+    int bank_smooth_start = 0;
+    int heading_smooth_start = 0;
+    int lat_smooth_start = 0;
+    int lon_smooth_start = 0;
+    int altitude_smooth_start = 0;
+    plane_data last_values = currentAttitude;
+    int minTx = next_tx - minTurnSmoothing;
+
+
+    // @TODO: tämä aiheuttaa tökkimistä, paremman lopputuloksen saa jos smoothaa vaan tarpeeksi. Esim 2000ms. Eli pitää kaikki *_start nollissa
+    // funtion idea on leikata dynaamisesti aikaikkunaa niin että se ottaa kahden edellisen arvon framen mukaan (tai vähintään minTurnSmoothing ajan)
+    while (!all_found && i > 0) {
+        if (pitch_smooth_start == 0 && last_values.pitch != currentAttitude.pitch) {
+            int ii = i;
+            long double v = last_values.pitch;
+            while (ii > 0 && (v == t_y.at(ii).pitch || t_x.at(ii) >= minTx)) {
+                ii--;
+            }
+            pitch_smooth_start = ii;
+        }
+        if (bank_smooth_start == 0 && last_values.bank != currentAttitude.bank) {
+            int ii = i;
+            long double v = last_values.bank;
+            while (ii > 0 && (v == t_y.at(ii).bank || t_x.at(ii) >= minTx)) {
+                ii--;
+            }
+            bank_smooth_start = ii;
+        }
+        if (heading_smooth_start == 0 && last_values.heading != currentAttitude.heading) {
+            int ii = i;
+            long double v = last_values.heading;
+            while (ii > 0 && (v == t_y.at(ii).heading || t_x.at(ii) >= minTx)) {
+                ii--;
+            }
+            heading_smooth_start = ii;
+        }
+        if (lat_smooth_start == 0 && last_values.lat != currentAttitude.lat) {
+            int ii = i;
+            long double v = last_values.lat;
+            while (ii > 0 && (v == t_y.at(ii).lat || t_x.at(ii) >= minTx)) {
+                ii--;
+            }
+            lat_smooth_start = ii/2;
+        }
+        if (lon_smooth_start == 0 && last_values.lon != currentAttitude.lon) {
+            int ii = i;
+            long double v = last_values.lon;
+            while (ii > 0 && (v == t_y.at(ii).lon || t_x.at(ii) >= minTx)) {
+                ii--;
+            }
+            lon_smooth_start = ii/2;
+        }
+        if (altitude_smooth_start == 0 && last_values.altitude != currentAttitude.altitude) {
+            int ii = i;
+            long double v = last_values.altitude;
+            while (ii > 0 && (v == t_y.at(ii).altitude || t_x.at(ii) >= minTx)) {
+                ii--;
+            }
+            altitude_smooth_start = ii/2;
+        }
+        i--;
+        //last_values = t_y.at(i);
+        //Ota tästä kommentti pois jos haluat ottaa tämän funkkarin käyttöön
+    }
+
+    plane_data smoothed = smooth(&t_y, pitch_smooth_start, bank_smooth_start, heading_smooth_start, lat_smooth_start, lon_smooth_start, altitude_smooth_start);
 
     m->at("HEr") = smoothed.bank;
     m->at("HGr") = smoothed.pitch;
     m->at("HCr") = smoothed.heading;
     m->at("HKr") = smoothed.lat;
     m->at("HMr") = smoothed.lon;
+    m->at("HA") = smoothed.altitude;
 }
 
 bool validateMap(std::map<std::string, long double>* m) {
