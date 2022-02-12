@@ -28,10 +28,8 @@
 #include "Network.h"
 
 
-// millisecond value for average calculation. 1000=smooth proxy values from 1s time frame.
-
-int minTurnSmoothing = 2000;
-int maxTurnSmoothing = 5000;
+// millisecond value for average calculation.
+int smoothFrame = 2000;
 
 int     quit = 0;
 HANDLE  hSimConnect = NULL;
@@ -277,7 +275,7 @@ plane_data dvToAttitude(const std::map<std::string, long double>* m) {
 
 void updatePrediction(std::map<std::string, long double>* m, long double current_tx) {
     double last_tx = t_x.size() > 0 ? t_x.at(t_x.size() - 1) : 0;
-    double delta_smoothing = last_tx - maxTurnSmoothing;
+    double delta_smoothing = last_tx - smoothFrame;
     double next_tx = last_tx + current_tx;
     if (delta_smoothing > 0) {
         next_tx -= delta_smoothing;
@@ -311,64 +309,6 @@ void updatePrediction(std::map<std::string, long double>* m, long double current
     int lon_smooth_start = 0;
     int altitude_smooth_start = 0;
     plane_data last_values = currentAttitude;
-    int minTx = next_tx - minTurnSmoothing;
-
-
-    // @TODO: tämä aiheuttaa tökkimistä, paremman lopputuloksen saa jos smoothaa vaan tarpeeksi. Esim 2000ms. Eli pitää kaikki *_start nollissa
-    // funtion idea on leikata dynaamisesti aikaikkunaa niin että se ottaa kahden edellisen arvon framen mukaan (tai vähintään minTurnSmoothing ajan)
-    /*while (!all_found && i > 0) {
-        if (pitch_smooth_start == 0 && last_values.pitch != currentAttitude.pitch) {
-            int ii = i;
-            long double v = last_values.pitch;
-            while (ii > 0 && (v == t_y.at(ii).pitch || t_x.at(ii) >= minTx)) {
-                ii--;
-            }
-            pitch_smooth_start = ii;
-        }
-        if (bank_smooth_start == 0 && last_values.bank != currentAttitude.bank) {
-            int ii = i;
-            long double v = last_values.bank;
-            while (ii > 0 && (v == t_y.at(ii).bank || t_x.at(ii) >= minTx)) {
-                ii--;
-            }
-            bank_smooth_start = ii;
-        }
-        if (heading_smooth_start == 0 && last_values.heading != currentAttitude.heading) {
-            int ii = i;
-            long double v = last_values.heading;
-            while (ii > 0 && (v == t_y.at(ii).heading || t_x.at(ii) >= minTx)) {
-                ii--;
-            }
-            heading_smooth_start = ii;
-        }
-        if (lat_smooth_start == 0 && last_values.lat != currentAttitude.lat) {
-            int ii = i;
-            long double v = last_values.lat;
-            while (ii > 0 && (v == t_y.at(ii).lat || t_x.at(ii) >= minTx)) {
-                ii--;
-            }
-            lat_smooth_start = ii/2;
-        }
-        if (lon_smooth_start == 0 && last_values.lon != currentAttitude.lon) {
-            int ii = i;
-            long double v = last_values.lon;
-            while (ii > 0 && (v == t_y.at(ii).lon || t_x.at(ii) >= minTx)) {
-                ii--;
-            }
-            lon_smooth_start = ii/2;
-        }
-        if (altitude_smooth_start == 0 && last_values.altitude != currentAttitude.altitude) {
-            int ii = i;
-            long double v = last_values.altitude;
-            while (ii > 0 && (v == t_y.at(ii).altitude || t_x.at(ii) >= minTx)) {
-                ii--;
-            }
-            altitude_smooth_start = ii/2;
-        }
-        i--;
-        //last_values = t_y.at(i);
-        //Ota tästä kommentti pois jos haluat ottaa tämän funkkarin käyttöön
-    }*/
 
     plane_data smoothed = smooth(&t_y, pitch_smooth_start, bank_smooth_start, heading_smooth_start, lat_smooth_start, lon_smooth_start, altitude_smooth_start);
 
@@ -419,15 +359,17 @@ void eventloop(const char* server, const char* port, LONG timeDelta) {
 
 int main(int argc, const char* argv[])
 {
-    if (!initFSX() || argc < 3) {
-        printf("Usage: %s [proxy IP] [proxy Port] [minSmooth=2000] [maxSmooth=5000]\r\n", argv[0]);
+    if (argc < 3) {
+        printf("Usage: %s [proxy IP] [proxy Port] [smoothFrame=2000]\r\n", argv[0]);
         return -1;
     }
-    if (argc >= 4) {
-        minTurnSmoothing = atoi(argv[3]);
+    if (!initFSX()){
+        printf("Unable to connect to FlightSimulator. Make sure that Flight Simulator is running\r\n");
+        return -1;
     }
-    if (argc >= 5) {
-        maxTurnSmoothing = atoi(argv[4]);
+        
+    if (argc >= 4) {
+        smoothFrame = atoi(argv[3]);
     }
     SYSTEMTIME time, last_time;
     GetSystemTime(&time);
