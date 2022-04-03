@@ -30,6 +30,7 @@
 
 // millisecond value for average calculation.
 int smoothFrame = 2000;
+int forceCamera = 0;
 
 int     quit = 0;
 HANDLE  hSimConnect = NULL;
@@ -57,7 +58,24 @@ static enum DATA_DEFINE_ID {
     PLANE_LON,
     PLANE_PITCH,
     PLANE_BANK,
-    PLANE_HEADING
+    PLANE_HEADING,
+    VELOCITY_BODY_X,
+    VELOCITY_BODY_Y,
+    VELOCITY_WORLD_Z,
+    VELOCITY_WORLD_X,
+    VELOCITY_WORLD_Y,
+    ACCELERATION_WORLD_X,
+    ACCELERATION_WORLD_Y,
+    ACCELERATION_WORLD_Z,
+    ACCELERATION_BODY_X,
+    ACCELERATION_BODY_Y,
+    ACCELERATION_BODY_Z,
+    ROTATION_VELOCITY_BODY_X,
+    ROTATION_VELOCITY_BODY_Y,
+    ROTATION_VELOCITY_BODY_Z,
+    AIRSPEED_TRUE,
+    AIRSPEED_INDICATED
+
 };
 
 static enum DATA_REQUEST_ID {
@@ -95,6 +113,7 @@ void CALLBACK MyDispatchProcSD(SIMCONNECT_RECV* pData, DWORD cbData, void *pCont
                     hr = SimConnect_TransmitClientEvent(hSimConnect, SIMCONNECT_OBJECT_ID_USER, KEY_FREEZE_ALTITUDE_SET, 1, SIMCONNECT_GROUP_PRIORITY_HIGHEST, SIMCONNECT_EVENT_FLAG_GROUPID_IS_PRIORITY);
                     hr = SimConnect_TransmitClientEvent(hSimConnect, SIMCONNECT_OBJECT_ID_USER, KEY_FREEZE_ATTITUDE_SET, 1, SIMCONNECT_GROUP_PRIORITY_HIGHEST, SIMCONNECT_EVENT_FLAG_GROUPID_IS_PRIORITY);
                     printf("Received sim start, sending freezes\r\n");
+                    
                     }
                     break;
 
@@ -133,11 +152,26 @@ bool initFSX()
         hr = SimConnect_AddToDataDefinition(hSimConnect, PLANE_BANK, "PLANE BANK DEGREES", "radians");
         hr = SimConnect_AddToDataDefinition(hSimConnect, PLANE_PITCH, "PLANE PITCH DEGREES", "radians");
         hr = SimConnect_AddToDataDefinition(hSimConnect, PLANE_HEADING, "PLANE HEADING DEGREES MAGNETIC", "radians");
+        hr = SimConnect_AddToDataDefinition(hSimConnect, VELOCITY_BODY_X, "VELOCITY BODY X", "feet per second");
+        hr = SimConnect_AddToDataDefinition(hSimConnect, VELOCITY_BODY_Y, "VELOCITY BODY Y", "feet per second");
+        hr = SimConnect_AddToDataDefinition(hSimConnect, ACCELERATION_BODY_X, "ACCELERATION BODY X", "feet per second");
+        hr = SimConnect_AddToDataDefinition(hSimConnect, ACCELERATION_BODY_Y, "ACCELERATION BODY Y", "feet per second");
+        hr = SimConnect_AddToDataDefinition(hSimConnect, ACCELERATION_BODY_Z, "ACCELERATION BODY Z", "feet per second");
+        hr = SimConnect_AddToDataDefinition(hSimConnect, ROTATION_VELOCITY_BODY_X, "ROTATION VELOCITY BODY X", "feet per second");
+        hr = SimConnect_AddToDataDefinition(hSimConnect, ROTATION_VELOCITY_BODY_Y, "ROTATION VELOCITY BODY Y", "feet per second");
+        hr = SimConnect_AddToDataDefinition(hSimConnect, ROTATION_VELOCITY_BODY_Z, "ROTATION VELOCITY BODY Z", "feet per second");
+        hr = SimConnect_AddToDataDefinition(hSimConnect, AIRSPEED_TRUE, "AIRSPEED TRUE", "knots");
+        hr = SimConnect_AddToDataDefinition(hSimConnect, AIRSPEED_INDICATED, "AIRSPEED INDICATED", "knots");
+
+ 
         printf("Registered data definitions to flight simulator\r\n");
 
         hr = SimConnect_MapClientEventToSimEvent(hSimConnect, KEY_FREEZE_LATITUDE_LONGITUDE_SET, "FREEZE_LATITUDE_LONGITUDE_SET");
         hr = SimConnect_MapClientEventToSimEvent(hSimConnect, KEY_FREEZE_ALTITUDE_SET, "FREEZE_ALTITUDE_SET");
         hr = SimConnect_MapClientEventToSimEvent(hSimConnect, KEY_FREEZE_ATTITUDE_SET, "FREEZE_ATTITUDE_SET");
+        hr = SimConnect_TransmitClientEvent(hSimConnect, SIMCONNECT_OBJECT_ID_USER, KEY_FREEZE_LATITUDE_LONGITUDE_SET, 1, SIMCONNECT_GROUP_PRIORITY_HIGHEST, SIMCONNECT_EVENT_FLAG_GROUPID_IS_PRIORITY);
+        hr = SimConnect_TransmitClientEvent(hSimConnect, SIMCONNECT_OBJECT_ID_USER, KEY_FREEZE_ALTITUDE_SET, 1, SIMCONNECT_GROUP_PRIORITY_HIGHEST, SIMCONNECT_EVENT_FLAG_GROUPID_IS_PRIORITY);
+        hr = SimConnect_TransmitClientEvent(hSimConnect, SIMCONNECT_OBJECT_ID_USER, KEY_FREEZE_ATTITUDE_SET, 1, SIMCONNECT_GROUP_PRIORITY_HIGHEST, SIMCONNECT_EVENT_FLAG_GROUPID_IS_PRIORITY);
         printf("Sent freeze commands\r\n");
 
         hr = SimConnect_SubscribeToSystemEvent(hSimConnect, EVENT_SIM_START, "SimStart");
@@ -185,12 +219,28 @@ void parseVarsToMap(const std::vector<std::string>& v, std::map<std::string, lon
 
 void sendDataToFSX(long double& Altitude, long double& Latitude, long double& Longitude, long double& Pitch,  long double& Bank, long double& Heading) {
     HRESULT hr;
+    long double v = 0;
+    Heading = Heading - 0.05;
     hr = SimConnect_SetDataOnSimObject(hSimConnect, PLANE_ALTITUDE, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(long double), &Altitude);
     hr = SimConnect_SetDataOnSimObject(hSimConnect, PLANE_LAT, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(long double), &Latitude);
     hr = SimConnect_SetDataOnSimObject(hSimConnect, PLANE_LON, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(long double), &Longitude);
     hr = SimConnect_SetDataOnSimObject(hSimConnect, PLANE_PITCH, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(long double), &Pitch);
     hr = SimConnect_SetDataOnSimObject(hSimConnect, PLANE_BANK, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(long double), &Bank);
     hr = SimConnect_SetDataOnSimObject(hSimConnect, PLANE_HEADING, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(long double), &Heading);
+    if (forceCamera > 0) {
+        hr = SimConnect_CameraSetRelative6DOF(hSimConnect,0 , 1, 0, Pitch-10, Bank, Heading);
+    }
+ /*   hr = SimConnect_SetDataOnSimObject(hSimConnect, VELOCITY_BODY_X, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(long double), &v);
+    hr = SimConnect_SetDataOnSimObject(hSimConnect, VELOCITY_BODY_Y, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(long double), &v);
+    hr = SimConnect_SetDataOnSimObject(hSimConnect, ACCELERATION_BODY_X, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(long double), &v);
+    hr = SimConnect_SetDataOnSimObject(hSimConnect, ACCELERATION_BODY_Y, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(long double), &v);
+    hr = SimConnect_SetDataOnSimObject(hSimConnect, ACCELERATION_BODY_Z, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(long double), &v);
+    hr = SimConnect_SetDataOnSimObject(hSimConnect, ROTATION_VELOCITY_BODY_X, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(long double), &v);
+    hr = SimConnect_SetDataOnSimObject(hSimConnect, ROTATION_VELOCITY_BODY_Y, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(long double), &v);
+    hr = SimConnect_SetDataOnSimObject(hSimConnect, ROTATION_VELOCITY_BODY_Z, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(long double), &v);
+    hr = SimConnect_SetDataOnSimObject(hSimConnect, AIRSPEED_TRUE, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(long double), &v);
+    hr = SimConnect_SetDataOnSimObject(hSimConnect, AIRSPEED_INDICATED, SIMCONNECT_OBJECT_ID_USER, 0, 0, sizeof(long double), &v);*/
+
 }
 
 long double smoothHelper(long double accVal, int breakPoint, int smoothingStart, int totalLength) {
@@ -347,7 +397,7 @@ void eventloop(const char* server, const char* port, LONG timeDelta) {
         updatePrediction(&m, timeDelta);
 
         // Send data to simulator
-        //printf("Altitude: %f, Lat: %f, Lon: %f, Pitch: %f, Bank: %f, Heading: %f, TDELTA: %ld \r", m["HA"], m["HKr"], m["HMr"], m["HEr"], m["HGr"], m["HCr"], timeDelta);
+        //printf("Altitude: %f, Lat: %f, Lon: %f, Pitch: %f, Bank: %f, Heading: %f, TDELTA: %ld \r\n", m["HA"], m["HKr"], m["HMr"], m["HEr"], m["HGr"], m["HCr"], timeDelta);
         sendDataToFSX(m["HA"], m["HKr"], m["HMr"], m["HEr"], m["HGr"], m["HCr"]);
     }
     else {
@@ -360,7 +410,7 @@ void eventloop(const char* server, const char* port, LONG timeDelta) {
 int main(int argc, const char* argv[])
 {
     if (argc < 3) {
-        printf("Usage: %s [proxy IP] [proxy Port] [smoothFrame=2000]\r\n", argv[0]);
+        printf("Usage: %s [proxy IP] [proxy Port] [smoothFrame=2000] [forceCamera=1 (or 0)]\r\n", argv[0]);
         return -1;
     }
     if (!initFSX()){
@@ -370,6 +420,9 @@ int main(int argc, const char* argv[])
         
     if (argc >= 4) {
         smoothFrame = atoi(argv[3]);
+        if (argc >= 5) {
+            forceCamera = atoi(argv[4]);
+        }
     }
     SYSTEMTIME time, last_time;
     GetSystemTime(&time);
